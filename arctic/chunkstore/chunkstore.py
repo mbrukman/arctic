@@ -1,7 +1,6 @@
 import logging
 import pymongo
 import numpy as np
-import bson
 import ast
 
 from bson.binary import Binary
@@ -401,3 +400,34 @@ class ChunkStore(object):
         ret['col_names'] = sym['dtype_metadata']
         ret['dtype'] = ast.literal_eval(sym['dtype'])
         return ret
+
+    def rename(self, old_symbol, new_symbol):
+        '''
+        Renames a symbol.
+
+        To rename a symbol, each chunk needs to have the following fields
+        updated:
+            - symbol
+            - sha (the sha is a checksum of the symbol and chunk (data)
+        The symbol document also needs to be updated
+
+
+        Parameters
+        ----------
+        old_symbol: str
+            the symbol to be renmaed
+        new_symbol: str
+            the new name for the symbol
+        '''
+
+        sym = self._get_symbol_info(old_symbol)
+        sym['symbol'] = new_symbol
+
+        self._collection.symbols.delete_many({'symbol': old_symbol})
+
+
+
+
+        mongo_retry(self._symbols.update_one)({'symbol': new_symbol},
+                                              {'$set': sym},
+                                              upsert=True)
